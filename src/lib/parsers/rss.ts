@@ -201,7 +201,7 @@ export function parseFeed(xmlText: string): ParsedFeed {
   }
   
   // Check for parse errors
-  const parseError = doc.querySelector('parsererror');
+  const parseError = doc.getElementsByTagName('parsererror')[0];
   if (parseError) {
     throw new Error(`XML parse error: ${parseError.textContent}`);
   }
