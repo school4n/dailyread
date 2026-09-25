@@ -6,7 +6,7 @@ import { fetchAndParseFeed } from './parsers/rss';
 import { generateSlug, normalizeUrl } from './utils/url';
 import { generateDuplicateGroupId } from './utils/dedup';
 
-interface SourceRow {
+export interface SourceRow {
   id: number;
   name: string;
   feed_url: string;
@@ -57,7 +57,7 @@ export async function runScheduler(): Promise<void> {
   }
 }
 
-async function processSource(source: SourceRow, startTime: Date): Promise<void> {
+export async function processSource(source: SourceRow, startTime: Date): Promise<void> {
   const logId = await createFetchLog(source.id);
   
   try {
