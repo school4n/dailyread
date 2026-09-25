@@ -1,7 +1,7 @@
 -- DailyRead Database Schema for Cloudflare D1
 -- Version: 1.0.0
 
-PRAGMA journal_mode = WAL;
+-- PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
 -- Categories table
