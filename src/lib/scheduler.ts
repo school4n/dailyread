@@ -5,6 +5,8 @@ import { db, queryAll, queryFirst, execute } from './db';
 import { fetchAndParseFeed } from './parsers/rss';
 import { generateSlug, normalizeUrl } from './utils/url';
 import { generateDuplicateGroupId } from './utils/dedup';
+import { fetchFullContent } from './parsers/html';
+import DOMPurify from 'isomorphic-dompurify';
 
 export interface SourceRow {
   id: number;
@@ -100,9 +102,23 @@ export async function processSource(source: SourceRow, startTime: Date): Promise
       const slug = generateSlug(item.title, item.pubDate);
       const duplicateGroupId = generateDuplicateGroupId(item.title);
       
-      const safeExcerpt = sanitizeText(item.description);
-      const safeContent = item.content ? sanitizeBasicHtml(item.content) : null;
-      const contentType = safeContent && safeContent.length > 200 ? 'full' : 'excerpt';
+      const safeExcerptOriginal = sanitizeText(item.description);
+      let safeContent = item.content ? sanitizeBasicHtml(item.content) : null;
+      let safeExcerpt = safeExcerptOriginal;
+      
+      // If RSS content is empty or too short, fetch the full article HTML
+      if (!safeContent || safeContent.length < 300) {
+        console.log(`[Scheduler] Fetching full text for: ${item.title}`);
+        const fullArticle = await fetchFullContent(item.link);
+        if (fullArticle && fullArticle.content) {
+          safeContent = DOMPurify.sanitize(fullArticle.content, { USE_PROFILES: { html: true } });
+          if (!safeExcerpt || safeExcerpt.length < 50) {
+            safeExcerpt = sanitizeText(fullArticle.excerpt);
+          }
+        }
+      }
+      
+      const contentType = safeContent && safeContent.length > 300 ? 'full' : 'excerpt';
       
       try {
         await execute(`
