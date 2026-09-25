@@ -16,7 +16,7 @@ async function main() {
     console.log('Applying schema.sql...');
     const schema = fs.readFileSync(path.join(__dirname, '../db/schema.sql'), 'utf-8');
     // executeMultiple is available in some versions, but we can just split by ;
-    const stmts = schema.split(';').map(s => s.trim()).filter(Boolean);
+    const stmts = schema.split(';').map(s => s.trim()).filter(s => s && s.replace(/--.*$/gm, '').trim());
     for (const stmt of stmts) {
       await client.execute(stmt);
     }
@@ -24,7 +24,7 @@ async function main() {
 
     console.log('Applying seed data...');
     const seed = fs.readFileSync(path.join(__dirname, '../db/migrations/0001_init.sql'), 'utf-8');
-    const seedStmts = seed.split(';').map(s => s.trim()).filter(Boolean);
+    const seedStmts = seed.split(';').map(s => s.trim()).filter(s => s && s.replace(/--.*$/gm, '').trim());
     for (const stmt of seedStmts) {
       try {
         await client.execute(stmt);
