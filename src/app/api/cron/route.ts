@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { runScheduler } from '@/lib/scheduler';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   // Option: Protect this route with a secret key
   const authHeader = request.headers.get('authorization');

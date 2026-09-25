@@ -83,9 +83,10 @@ export async function processSource(source: SourceRow, startTime: Date): Promise
     }
     
     const { feed, etag, lastModified } = result;
-    const items = feed.items;
+    // Limit to 10 items per fetch to prevent 10s timeout on Vercel Free tier
+    const items = feed.items.slice(0, 10);
     
-    console.log(`[Scheduler] ${source.name}: Found ${items.length} items`);
+    console.log(`[Scheduler] ${source.name}: Processing ${items.length} items (limited from ${feed.items.length})`);
     
     for (const item of items) {
       if (!item.title || !item.link) continue;
