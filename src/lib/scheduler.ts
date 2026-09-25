@@ -22,6 +22,8 @@ export interface SourceRow {
 
 export async function runScheduler(): Promise<void> {
   console.log('[Scheduler] Starting feed collection run...');
+  const globalStartTime = Date.now();
+  const TIME_LIMIT = 8500; // 8.5 seconds limit for Vercel Hobby
   
   try {
     const now = new Date();
@@ -48,7 +50,11 @@ export async function runScheduler(): Promise<void> {
     
     // Process sources sequentially to avoid overloading
     for (const source of sources) {
-      await processSource(source, now);
+      if (Date.now() - globalStartTime > TIME_LIMIT) {
+        console.log('[Scheduler] Global time limit reached, stopping source loop');
+        break;
+      }
+      await processSource(source, now, globalStartTime, TIME_LIMIT);
       // Small delay between sources
       await new Promise(resolve => setTimeout(resolve, 500));
     }
@@ -59,7 +65,7 @@ export async function runScheduler(): Promise<void> {
   }
 }
 
-export async function processSource(source: SourceRow, startTime: Date): Promise<void> {
+export async function processSource(source: SourceRow, startTime: Date, globalStartTime: number = 0, timeLimit: number = 25000): Promise<void> {
   const logId = await createFetchLog(source.id);
   
   try {
@@ -89,6 +95,11 @@ export async function processSource(source: SourceRow, startTime: Date): Promise
     console.log(`[Scheduler] ${source.name}: Processing ${items.length} items (limited from ${feed.items.length})`);
     
     for (const item of items) {
+      if (globalStartTime > 0 && Date.now() - globalStartTime > timeLimit) {
+        console.log(`[Scheduler] Time limit reached during items loop for ${source.name}`);
+        break;
+      }
+      
       if (!item.title || !item.link) continue;
       
       const canonicalUrl = normalizeUrl(item.link);
