@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { ArticleCard } from './ArticleCard';
 import type { Article } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : 'http://localhost:3000/api');
+import { queryAll, queryFirst } from '@/lib/db';
+
 const PAGE_SIZE = 20;
 
 async function fetchCategoryArticles(
@@ -16,23 +17,41 @@ async function fetchCategoryArticles(
 ): Promise<{ articles: Article[]; total: number }> {
   try {
     const offset = (page - 1) * PAGE_SIZE;
-    const params = new URLSearchParams({
-      category,
-      sort,
-      limit: String(PAGE_SIZE),
-      offset: String(offset),
-    });
-    if (period !== 'all') params.set('period', period);
+    let whereClause = 'WHERE a.is_hidden = 0';
+    const bindings: any[] = [];
     
-    const res = await fetch(`${API_URL}/articles?${params}`, {
-      next: { revalidate: 300 },
+    if (category && category !== 'latest') {
+      whereClause += ' AND a.category = ?';
+      bindings.push(category);
+    }
+    
+    if (period === '24h') {
+      whereClause += " AND a.published_at >= datetime('now', '-1 day')";
+    } else if (period === '7d') {
+      whereClause += " AND a.published_at >= datetime('now', '-7 days')";
+    }
+    
+    const orderBy = sort === 'oldest' 
+      ? 'ORDER BY COALESCE(a.published_at, a.fetched_at) ASC'
+      : 'ORDER BY COALESCE(a.published_at, a.fetched_at) DESC';
+      
+    const query = `SELECT a.*, s.name as source_name FROM articles a LEFT JOIN sources s ON a.source_id = s.id ${whereClause} ${orderBy} LIMIT ? OFFSET ?`;
+    const countQuery = `SELECT COUNT(*) as total FROM articles a ${whereClause}`;
+    
+    const [articles, countResult] = await Promise.all([
+      queryAll(query, [...bindings, PAGE_SIZE, offset]),
+      queryFirst<{ total: number }>(countQuery, bindings)
+    ]);
+    
+    const formatted = articles.map((row: any) => {
+      let tags = [];
+      try { if (row.tags) tags = JSON.parse(row.tags); } catch {}
+      return { ...row, tags, is_hidden: Boolean(row.is_hidden) };
     });
     
-    if (!res.ok) return { articles: [], total: 0 };
-    const data = await res.json();
     return {
-      articles: data.data || [],
-      total: data.meta?.total || 0,
+      articles: formatted,
+      total: countResult?.total || 0,
     };
   } catch {
     return { articles: [], total: 0 };

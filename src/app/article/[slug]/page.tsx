@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { ArticleReader } from '@/components/ArticleReader';
 import type { Article } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : 'http://localhost:3000/api');
+import { queryFirst } from '@/lib/db';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -14,12 +14,21 @@ interface Props {
 
 async function getArticle(slug: string): Promise<(Article & { duplicate_count: number }) | null> {
   try {
-    const res = await fetch(`${API_URL}/articles/${slug}`, {
-      next: { revalidate: 600 },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.data || null;
+    const article = await queryFirst<any>(`
+      SELECT a.*, s.name as source_name
+      FROM articles a LEFT JOIN sources s ON a.source_id = s.id
+      WHERE a.slug = ? AND a.is_hidden = 0 LIMIT 1
+    `, [slug]);
+    if (!article) return null;
+
+    const dupCount = article.duplicate_group_id 
+      ? await queryFirst<{ count: number }>('SELECT COUNT(*) as count FROM articles WHERE duplicate_group_id = ? AND id != ?', [article.duplicate_group_id, article.id])
+      : null;
+      
+    let tags = [];
+    try { if (article.tags) tags = JSON.parse(article.tags); } catch {}
+    
+    return { ...article, tags, is_hidden: Boolean(article.is_hidden), duplicate_count: dupCount?.count || 0 };
   } catch {
     return null;
   }

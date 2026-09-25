@@ -6,20 +6,24 @@ import { ArticleCard } from './ArticleCard';
 import type { Article } from '@/types';
 import { getCategoryIcon, getCategoryName } from '@/lib/utils';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : 'http://localhost:3000/api');
+import { queryAll } from '@/lib/db';
 
 async function fetchArticles(category?: string, limit = 10): Promise<Article[]> {
   try {
-    const params = new URLSearchParams({ limit: String(limit) });
-    if (category && category !== 'latest') params.set('category', category);
+    let where = 'WHERE a.is_hidden = 0';
+    const params: any[] = [];
+    if (category && category !== 'latest') {
+      where += ' AND a.category = ?';
+      params.push(category);
+    }
+    const query = `SELECT a.*, s.name as source_name FROM articles a LEFT JOIN sources s ON a.source_id = s.id ${where} ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT ?`;
+    const rows = await queryAll(query, [...params, limit]);
     
-    const res = await fetch(`${API_URL}/articles?${params}`, {
-      next: { revalidate: 300 },
+    return rows.map((row: any) => {
+      let tags = [];
+      try { if (row.tags) tags = JSON.parse(row.tags); } catch {}
+      return { ...row, tags, is_hidden: Boolean(row.is_hidden) };
     });
-    
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.data || [];
   } catch {
     return [];
   }
