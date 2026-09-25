@@ -2,9 +2,9 @@
 // src/lib/scheduler.ts
 
 import { db, queryAll, queryFirst, execute } from './db';
-import { fetchAndParseFeed } from '../../worker/parsers/rss';
-import { generateSlug, normalizeUrl } from '../../worker/utils/url';
-import { generateDuplicateGroupId } from '../../worker/utils/dedup';
+import { fetchAndParseFeed } from './parsers/rss';
+import { generateSlug, normalizeUrl } from './utils/url';
+import { generateDuplicateGroupId } from './utils/dedup';
 
 interface SourceRow {
   id: number;

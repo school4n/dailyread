@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryAll, queryFirst, execute } from '@/lib/db';
-import { fetchAndParseFeed } from '../../../../worker/parsers/rss';
+import { fetchAndParseFeed } from '@/lib/parsers/rss';
 import { runScheduler } from '@/lib/scheduler';
 
 function isAdmin(request: Request): boolean {
@@ -66,7 +66,7 @@ export async function POST(request: Request, context: any) {
         const result = await fetchAndParseFeed(body.feed_url, { timeout: 15000 });
         return NextResponse.json({ success: true, data: {
           valid: true, title: result.feed.title, itemCount: result.feed.items.length,
-          preview: result.feed.items.slice(0, 5).map(item => ({ title: item.title, link: item.link, pubDate: item.pubDate }))
+          preview: result.feed.items.slice(0, 5).map((item: any) => ({ title: item.title, link: item.link, pubDate: item.pubDate }))
         }});
       } catch (err) {
         return NextResponse.json({ success: true, data: { valid: false, error: err instanceof Error ? err.message : 'Unknown error' }});

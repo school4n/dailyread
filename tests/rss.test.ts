@@ -6,7 +6,7 @@
  * Run with: node tests/rss.test.ts (requires ts-node or tsx)
  */
 
-import { parseFeed } from '../worker/parsers/rss';
+import { parseFeed } from '../src/lib/parsers/rss';
 
 const RSS_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">

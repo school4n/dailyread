@@ -1,8 +1,8 @@
 // URL utility tests
 // tests/url.test.ts
 
-import { normalizeUrl, slugify, generateSlug, isValidUrl } from '../worker/utils/url';
-import { normalizeTitle, calculateSimilarity } from '../worker/utils/dedup';
+import { normalizeUrl, slugify, generateSlug, isValidUrl } from '../src/lib/utils/url';
+import { normalizeTitle, calculateSimilarity } from '../src/lib/utils/dedup';
 
 type TestResult = { passed: boolean; name: string };
 
