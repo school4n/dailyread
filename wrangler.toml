@@ -1,0 +1,43 @@
+# Cloudflare Wrangler Configuration
+# wrangler.toml
+
+name = "dailyread-worker"
+main = "worker/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── D1 Database Binding ─────────────────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "dailyread"
+database_id = "YOUR_D1_DATABASE_ID"  # Replace after: wrangler d1 create dailyread
+
+# ─── Environment Variables ────────────────────────────────────────────────────
+[vars]
+ENVIRONMENT = "production"
+PUBLIC_SITE_URL = "https://dailyread.example.com"
+
+# ─── Cron Triggers ───────────────────────────────────────────────────────────
+[triggers]
+crons = [
+  "*/30 * * * *",   # Every 30 minutes - main collection
+]
+
+# ─── Development Settings ─────────────────────────────────────────────────────
+[dev]
+port = 8787
+local_protocol = "http"
+
+# ─── Production Routes ───────────────────────────────────────────────────────
+# Uncomment and configure for custom domain
+# [[routes]]
+# pattern = "dailyread.example.com/api/*"
+# zone_name = "example.com"
+
+# ─── Build Settings ──────────────────────────────────────────────────────────
+[build]
+command = "npm run build:worker"
+
+# ─── Secrets (set via: wrangler secret put ADMIN_SECRET) ─────────────────────
+# ADMIN_SECRET - Admin panel password
+# Set with: wrangler secret put ADMIN_SECRET
