@@ -2,6 +2,7 @@
 // worker/parsers/rss.ts
 
 import type { ParsedFeed, RssItem } from '@/types';
+import { DOMParser } from '@xmldom/xmldom';
 
 /**
  * Parse date string to ISO format
@@ -194,7 +195,7 @@ export function parseFeed(xmlText: string): ParsedFeed {
   let doc: Document;
   
   try {
-    doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    doc = new DOMParser().parseFromString(xmlText, 'text/xml') as unknown as Document;
   } catch (err) {
     throw new Error(`Failed to parse XML: ${err}`);
   }
