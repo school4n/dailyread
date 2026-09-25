@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArticleCard } from './ArticleCard';
 import type { Article } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:8787/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : 'http://localhost:3000/api');
 const PAGE_SIZE = 20;
 
 async function fetchCategoryArticles(

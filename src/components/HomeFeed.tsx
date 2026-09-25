@@ -6,7 +6,7 @@ import { ArticleCard } from './ArticleCard';
 import type { Article } from '@/types';
 import { getCategoryIcon, getCategoryName } from '@/lib/utils';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:8787/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : 'http://localhost:3000/api');
 
 async function fetchArticles(category?: string, limit = 10): Promise<Article[]> {
   try {
