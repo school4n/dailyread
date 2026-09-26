@@ -1,12 +1,10 @@
 // Background scheduler / cron job for collecting articles
 // src/lib/scheduler.ts
 
-import { db, queryAll, queryFirst, execute } from './db';
+import { queryAll, queryFirst, execute } from './db';
 import { fetchAndParseFeed } from './parsers/rss';
 import { generateSlug, normalizeUrl } from './utils/url';
 import { generateDuplicateGroupId } from './utils/dedup';
-import { fetchFullContent } from './parsers/html';
-import DOMPurify from 'isomorphic-dompurify';
 
 export interface SourceRow {
   id: number;
@@ -85,7 +83,7 @@ async function releaseLock(): Promise<void> {
 export async function runScheduler(): Promise<SchedulerResult> {
   console.log('[Scheduler] Starting feed collection run...');
   const globalStartTime = Date.now();
-  const TIME_LIMIT = 8000; // 8 seconds — safe margin for Vercel Hobby 10s limit
+  const TIME_LIMIT = 7000; // 7 seconds — safe margin for Vercel Hobby 10s limit
   
   const result: SchedulerResult = {
     sourcesProcessed: 0,
@@ -126,7 +124,7 @@ export async function runScheduler(): Promise<SchedulerResult> {
         ) || ' minutes') <= datetime('now')
       )
       ORDER BY last_fetched_at ASC NULLS FIRST
-      LIMIT 5
+      LIMIT 3
     `);
     
     if (!sources || sources.length === 0) {
@@ -159,7 +157,7 @@ export async function runScheduler(): Promise<SchedulerResult> {
       }
       
       // Small delay between sources to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     console.log(`[Scheduler] Complete: ${result.sourcesProcessed} sources, ${result.totalArticlesAdded} articles added`);
@@ -190,7 +188,7 @@ export async function processSource(
     await execute(`UPDATE sources SET last_fetched_at = ? WHERE id = ?`, [startTime.toISOString(), source.id]);
     
     // Use shorter timeout for fetch — proportional to remaining time budget
-    const fetchTimeout = Math.min(15000, Math.max(5000, remainingMs - 2000));
+    const fetchTimeout = Math.min(8000, Math.max(3000, remainingMs - 1000));
     
     const result = await fetchAndParseFeed(source.feed_url, {
       etag: source.etag || undefined,
@@ -211,7 +209,7 @@ export async function processSource(
     
     const { feed, etag, lastModified } = result;
     // Limit to 5 items per fetch (down from 10) to stay within time budget
-    const items = feed.items.slice(0, 5);
+    const items = feed.items.slice(0, 3);
     
     console.log(`[Scheduler] ${source.name}: Processing ${items.length} items (total: ${feed.items.length})`);
     
@@ -240,26 +238,9 @@ export async function processSource(
       let safeContent = item.content ? sanitizeBasicHtml(item.content) : null;
       let safeExcerpt = safeExcerptOriginal;
       
-      // Only fetch full content if we have enough time budget remaining (at least 3s)
-      const timeRemaining = globalStartTime > 0 ? timeLimit - (Date.now() - globalStartTime) : Infinity;
-      
-      if ((!safeContent || safeContent.length < 300) && timeRemaining > 3000) {
-        try {
-          console.log(`[Scheduler] Fetching full text: ${item.title?.substring(0, 50)}...`);
-          const fullArticle = await fetchFullContent(item.link);
-          if (fullArticle && fullArticle.content) {
-            safeContent = DOMPurify.sanitize(fullArticle.content, { USE_PROFILES: { html: true } });
-            if (!safeExcerpt || safeExcerpt.length < 50) {
-              safeExcerpt = sanitizeText(fullArticle.excerpt);
-            }
-          }
-        } catch (err) {
-          // Don't fail the whole article just because full content fetch failed
-          console.warn(`[Scheduler] Full content fetch failed for ${item.link}: ${err}`);
-        }
-      } else if (timeRemaining <= 3000) {
-        console.log(`[Scheduler] Skipping full content fetch (only ${Math.round(timeRemaining / 1000)}s left)`);
-      }
+      // NOTE: fetchFullContent is disabled in cron to stay within Vercel 10s limit.
+      // Articles with short/missing content are saved as 'excerpt' type.
+      // Full content can be fetched lazily when the article page is viewed.
       
       const contentType = safeContent && safeContent.length > 300 ? 'full' : 'excerpt';
       

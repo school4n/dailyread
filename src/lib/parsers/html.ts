@@ -1,7 +1,7 @@
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 
-export async function fetchFullContent(url: string, timeoutMs: number = 5000): Promise<{ content?: string; excerpt?: string; title?: string; textContent?: string } | null> {
+export async function fetchFullContent(url: string, timeoutMs: number = 3000): Promise<{ content?: string; excerpt?: string; title?: string; textContent?: string } | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
