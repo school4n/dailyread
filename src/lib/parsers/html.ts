@@ -1,10 +1,10 @@
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 
-export async function fetchFullContent(url: string): Promise<{ content?: string; excerpt?: string; title?: string; textContent?: string } | null> {
+export async function fetchFullContent(url: string, timeoutMs: number = 5000): Promise<{ content?: string; excerpt?: string; title?: string; textContent?: string } | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     
     const response = await fetch(url, {
       headers: {
@@ -18,7 +18,20 @@ export async function fetchFullContent(url: string): Promise<{ content?: string;
     
     if (!response.ok) return null;
     
-    const html = await response.text();
+    // Limit response size to 2MB to avoid memory/time issues
+    const contentLength = response.headers.get('Content-Length');
+    if (contentLength && parseInt(contentLength) > 2 * 1024 * 1024) {
+      console.warn(`[HTML Parser] Response too large for ${url}: ${contentLength} bytes`);
+      return null;
+    }
+    
+    let html = await response.text();
+    
+    // Truncate if too large
+    if (html.length > 2 * 1024 * 1024) {
+      html = html.substring(0, 2 * 1024 * 1024);
+    }
+    
     const doc = new JSDOM(html, { url });
     
     const reader = new Readability(doc.window.document);
@@ -37,3 +50,4 @@ export async function fetchFullContent(url: string): Promise<{ content?: string;
     return null;
   }
 }
+

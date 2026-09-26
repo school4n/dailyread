@@ -54,10 +54,14 @@ export async function POST(request: Request, context: any) {
       const id = parseInt(path[1]);
       await execute('UPDATE sources SET last_fetched_at = NULL WHERE id = ?', [id]);
       
-      // Run the scheduler in the background (fire and forget doesn't work perfectly in Vercel, but we try)
-      runScheduler().catch(console.error);
-      
-      return NextResponse.json({ success: true, data: { triggered: true } });
+      // Run the scheduler and await result (with timeout safety)
+      try {
+        const result = await runScheduler();
+        return NextResponse.json({ success: true, data: { triggered: true, ...result } });
+      } catch (err) {
+        console.error('Manual fetch trigger failed:', err);
+        return NextResponse.json({ success: true, data: { triggered: true, error: String(err) } });
+      }
     }
     
     if (path[0] === 'test-feed' && path.length === 1) {

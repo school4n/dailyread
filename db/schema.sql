@@ -31,10 +31,18 @@ CREATE TABLE IF NOT EXISTS sources (
   last_fetched_at TEXT,
   last_success_at TEXT,
   last_error TEXT,
+  consecutive_errors INTEGER DEFAULT 0, -- for exponential backoff
   etag TEXT,
   last_modified TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Scheduler lock table (prevents concurrent cron runs)
+CREATE TABLE IF NOT EXISTS scheduler_lock (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  locked_at TEXT NOT NULL,
+  locked_by TEXT
 );
 
 -- Articles table
